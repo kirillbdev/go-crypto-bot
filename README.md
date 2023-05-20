@@ -1,0 +1,1 @@
+Cryptocurrency monitoring bot written in Go
