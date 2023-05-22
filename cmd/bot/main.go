@@ -2,10 +2,13 @@ package main
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/kirillbdev/go-crypto-bot/internal/bot/di"
+	"github.com/kirillbdev/go-crypto-bot/internal/bot/repository/dto"
 	"os"
 )
 
 func main() {
+	container := di.GetContainer()
 	token := os.Getenv("BOT_TOKEN")
 
 	if token == "" {
@@ -32,6 +35,12 @@ func main() {
 
 		if update.Message.IsCommand() && update.Message.Command() == "start" {
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Hello, I'm simple crypto monitoring bot")
+
+			container.PortfolioRepo().Insert(dto.InsertPortfolio{
+				UserId:    update.Message.Chat.ID,
+				Name:      "My Portfolio",
+				IsDefault: true,
+			})
 		}
 
 		if _, err := bot.Send(msg); err != nil {
