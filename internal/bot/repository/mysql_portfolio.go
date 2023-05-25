@@ -13,11 +13,26 @@ type MySqlPortfolioRepository struct {
 	db *sql.DB
 }
 
+func NewMySqlPortfolioRepository(host string, user string, pass string, name string) *MySqlPortfolioRepository {
+	db, err := sql.Open(
+		"mysql",
+		fmt.Sprintf("%s:%s@(%s)/%s", user, pass, host, name),
+	)
+
+	if err != nil {
+		panic("Unable to open database connection" + err.Error())
+	}
+
+	return &MySqlPortfolioRepository{
+		db: db,
+	}
+}
+
 func (repo *MySqlPortfolioRepository) Insert(dto dto.InsertPortfolio) int64 {
 	now := float64(time.Now().UnixMicro()) / 1000000
 
-	query := "INSERT INTO `portfolio` (`user_id`, `name`, `default`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?)"
-	result, err := repo.db.Exec(query, dto.UserId, dto.Name, dto.IsDefault, now, now)
+	query := "INSERT INTO `portfolio` (`chat_id`, `name`, `default`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?)"
+	result, err := repo.db.Exec(query, dto.ChatId, dto.Name, dto.IsDefault, now, now)
 
 	if err != nil {
 		log.Fatalf("Database insert error: %s", err)
@@ -32,17 +47,14 @@ func (repo *MySqlPortfolioRepository) Insert(dto dto.InsertPortfolio) int64 {
 	return id
 }
 
-func NewMySqlPortfolioRepository(host string, user string, pass string, name string) *MySqlPortfolioRepository {
-	db, err := sql.Open(
-		"mysql",
-		fmt.Sprintf("%s:%s@(%s)/%s", user, pass, host, name),
-	)
+func (repo *MySqlPortfolioRepository) FindDefaultPortfolioId(chatId int64) int64 {
+	row := repo.db.QueryRow("SELECT `id` FROM `portfolio` WHERE `chat_id` = ? AND `default` = 1", chatId)
 
-	if err != nil {
-		panic("Unable to open database connection" + err.Error())
+	var id int64
+
+	if err := row.Scan(&id); err != nil {
+		return 0
 	}
 
-	return &MySqlPortfolioRepository{
-		db: db,
-	}
+	return id
 }

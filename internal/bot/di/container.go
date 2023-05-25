@@ -2,7 +2,6 @@ package di
 
 import (
 	"github.com/kirillbdev/go-crypto-bot/internal/bot/repository"
-	"os"
 )
 
 type Container struct {
@@ -15,24 +14,26 @@ func (c *Container) PortfolioRepo() repository.PortfolioRepository {
 
 var containerInstance *Container
 
-func createContainer() *Container {
-	portfolioRepo := repository.NewMySqlPortfolioRepository(
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASS"),
-		os.Getenv("DB_NAME"),
-	)
-
-	container := Container{
-		portfolioRepo: portfolioRepo,
+func CreateContainer(config Config) {
+	if containerInstance != nil {
+		panic("Container already created")
 	}
 
-	return &container
+	portfolioRepo := repository.NewMySqlPortfolioRepository(
+		config.dbHost,
+		config.dbUser,
+		config.dbPass,
+		config.dbName,
+	)
+
+	containerInstance = &Container{
+		portfolioRepo: portfolioRepo,
+	}
 }
 
 func GetContainer() *Container {
 	if containerInstance == nil {
-		containerInstance = createContainer()
+		panic("You cannot retrieve container without initialization")
 	}
 
 	return containerInstance

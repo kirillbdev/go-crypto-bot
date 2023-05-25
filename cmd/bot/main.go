@@ -2,12 +2,21 @@ package main
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	internal "github.com/kirillbdev/go-crypto-bot/internal/bot"
+	"github.com/kirillbdev/go-crypto-bot/internal/bot/app"
 	"github.com/kirillbdev/go-crypto-bot/internal/bot/di"
-	"github.com/kirillbdev/go-crypto-bot/internal/bot/repository/dto"
+	"github.com/kirillbdev/go-crypto-bot/internal/bot/handler"
 	"os"
 )
 
 func main() {
+	di.CreateContainer(di.NewConfig(
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASS"),
+		os.Getenv("DB_NAME"),
+	))
+
 	container := di.GetContainer()
 	token := os.Getenv("BOT_TOKEN")
 
@@ -21,6 +30,10 @@ func main() {
 		panic(err)
 	}
 
+	ctx := app.NewContext(bot)
+	processor := internal.NewUpdatesProcessor(ctx)
+	processor.AddHandler(handler.NewStartHandler(container.PortfolioRepo()))
+
 	bot.Debug = true
 	updateConfig := tgbotapi.NewUpdate(0)
 	updateConfig.Timeout = 30
@@ -31,20 +44,6 @@ func main() {
 			continue
 		}
 
-		var msg tgbotapi.MessageConfig
-
-		if update.Message.IsCommand() && update.Message.Command() == "start" {
-			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Hello, I'm simple crypto monitoring bot")
-
-			container.PortfolioRepo().Insert(dto.InsertPortfolio{
-				UserId:    update.Message.Chat.ID,
-				Name:      "My Portfolio",
-				IsDefault: true,
-			})
-		}
-
-		if _, err := bot.Send(msg); err != nil {
-			panic(err)
-		}
+		processor.Process(update)
 	}
 }
